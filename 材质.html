@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>基础</title>
+  <title>材质</title>
   <style>
     html,body{
       margin: 0;
@@ -52,7 +52,7 @@
       // const material=new THREE.MeshBasicMaterial({color:0x44aa88})
 
       function makeInstance(geometry,color,x){
-        const material=new THREE.MeshPhongMaterial({color}) //material材质代表绘制几何体的表面属性
+        const material=new THREE.MeshPhongMaterial({color:color,flatShading:false,shininess:150,side:THREE.DoubleSide}) //material材质代表绘制几何体的表面属性
         const cube=new THREE.Mesh(geometry,material) //Mesh对象，可以理解为用一种特定材质(material)来绘制的一个特定的几何体(geometry)
         scene.add(cube)
         cube.position.x=x;
@@ -61,8 +61,6 @@
 
       const cubes=[
         makeInstance(geometry,0x44aa88,0),
-        makeInstance(geometry,0x8844aa,-2),
-        makeInstance(geometry,0xaa8844,2)
       ]
 
       function resizeRendererToDisplaySize(renderer){

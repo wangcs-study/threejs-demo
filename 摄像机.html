@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>光源</title>
+  <style>
+    html,body{
+      margin: 0;
+      height: 100%;
+    }
+    #c{
+      width:100%;
+      height: 100%;
+      display: block;
+    }
+    .split{
+      position: absolute;
+      left:0;
+      top:0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+    }
+    .split>div{
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="split">
+    <div id="view1" tabindex="1"></div>
+    <div id="view2" tabindex="2"></div>
+  </div>
+  <script type="importmap">
+    {
+      "imports":{
+        "three":"./node_modules/three/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three'
+    import {OrbitControls} from './node_modules/three/examples/jsm/controls/OrbitControls.js'
+    import {GUI} from './node_modules/three/examples/jsm/libs/lil-gui.module.min.js'
+    function main(){
+      //渲染器
+      const canvas=document.getElementById('c');
+      const view1Elem=document.getElementById('view1')
+      const view2Elem=document.getElementById('view2')
+      const renderer=new THREE.WebGLRenderer({canvas})
+      //相机-透视摄影机
+      // const fov=45; //视野范围 field of view
+      // const aspect=2;
+      // const near=0.1
+      // const far=100;
+      //视锥 是一个切掉顶的三角锥或者说实心金字塔行
+      //PerspectiveCamera透视摄像机 定义了一个视锥
+      //near 定义了视锥的前端
+      //far 定义了视锥的后端
+      //fov 是视野，通过计算正确的高度来从摄像机的位置获得指定的以near为单位的视野，
+      //aspect 间接地定义了视锥前后端的宽度
+      // const camera=new THREE.PerspectiveCamera(fov,aspect,near,far)
+      
+      //正交摄像机
+      const size=1;
+      const far=5;
+      const near=50
+      const camera=new THREE.OrthographicCamera(-size,size,size,-size,near,far)
+      camera.zoom=0.2
+      camera.position.set(0,10,20)
+
+      const cameraHelper=new THREE.CameraHelper(camera)
+
+      class MinMaxGUIHelper {
+        constructor(obj, minProp, maxProp, minDif) {
+          this.obj = obj;
+          this.minProp = minProp;
+          this.maxProp = maxProp;
+          this.minDif = minDif;
+        }
+        get min() {
+          return this.obj[this.minProp];
+        }
+        set min(v) {
+          this.obj[this.minProp] = v;
+          this.obj[this.maxProp] = Math.max(this.obj[this.maxProp], v + this.minDif);
+        }
+        get max() {
+          return this.obj[this.maxProp];
+        }
+        set max(v) {
+          this.obj[this.maxProp] = v;
+          this.min = this.min;  // this will call the min setter
+        }
+      }
+
+      // function updateCamera(){
+      //   camera.updateProjectionMatrix()
+      // }
+
+      const gui = new GUI();
+      gui.add(camera,'zoom',0.01,1,0.01).listen()
+      // gui.add(camera, 'fov', 1, 180);
+      const minMaxGUIHelper = new MinMaxGUIHelper(camera, 'near', 'far', 0.1);
+      gui.add(minMaxGUIHelper, 'min', 0.1, 50, 0.1).name('near');
+      gui.add(minMaxGUIHelper, 'max', 0.1, 50, 0.1).name('far');
+
+      // const controls=new OrbitControls(camera,canvas)
+      const controls=new OrbitControls(camera,view1Elem)
+      controls.target.set(0,5,0)
+      controls.update()
+
+      const camera2=new THREE.PerspectiveCamera(60,2,0.1,500)
+      camera2.position.set(16,28,40)
+      camera2.lookAt(0,5,0)
+
+      const controls2=new OrbitControls(camera2,view2Elem)
+      controls2.target.set(0,5,0)
+      controls2.update()
+
+      //场景
+      const scene=new THREE.Scene();
+      scene.background=new THREE.Color('black');
+      scene.add(cameraHelper)
+
+      {
+        const planeSize=40
+        const loader=new THREE.TextureLoader()
+        const texture=loader.load('https://threejs.org/manual/examples/resources/images/checker.png')
+        texture.wrapS=THREE.RepeatWrapping
+        texture.wrapT=THREE.RepeatWrapping
+        texture.magFilter=THREE.NearestFilter
+        const repeats=planeSize/2
+        texture.repeat.set(repeats,repeats)
+
+        const planeGeo=new THREE.PlaneGeometry(planeSize,planeSize)
+        const planeMat=new THREE.MeshPhongMaterial({
+          map:texture,
+          side:THREE.DoubleSide, //side:要显示三角形的那个面，默认THREE.FrontSide(正面)。THREE.BackSide(反面：面向实体内部的面)
+        })
+        const mesh=new THREE.Mesh(planeGeo,planeMat)
+        mesh.rotation.x=Math.PI * -.5
+        scene.add(mesh)
+      }
+      {
+        const cubeSize=4
+        const cubeGeo=new THREE.BoxGeometry(cubeSize,cubeSize,cubeSize)
+        const cubeMat=new THREE.MeshPhongMaterial({color:'#8ac'})
+        const mesh=new THREE.Mesh(cubeGeo,cubeMat)
+        mesh.position.set(cubeSize+1,cubeSize/2,0)
+        scene.add(mesh)
+      }
+      {
+        const sphereRadius=3
+        const sphereWidthDivisions=32
+        const sphereHeightDivisions=16
+        const sphereGeo=new THREE.SphereGeometry(sphereRadius,sphereWidthDivisions,sphereHeightDivisions)
+        const sphereMat=new THREE.MeshPhongMaterial({color:'#ca8'})
+        const mesh=new THREE.Mesh(sphereGeo,sphereMat)
+        mesh.position.set(-sphereRadius-1,sphereRadius+2,0)
+        scene.add(mesh)
+      }
+      {
+        const color=0xffffff;
+        const intensity=1;
+        const light=new THREE.DirectionalLight(color,intensity)
+        light.position.set(0,10,0)
+        light.target.position.set(-5,0,0)
+        scene.add(light)
+        scene.add(light.target)
+      }
+
+      function setScissorForElement(elem){
+        const canvasRect=canvas.getBoundingClientRect()
+        const elemRect=elem.getBoundingClientRect()
+        //计算canvas尺寸
+        const right = Math.min(elemRect.right, canvasRect.right) - canvasRect.left;
+        const left = Math.max(0, elemRect.left - canvasRect.left);
+        const bottom = Math.min(elemRect.bottom, canvasRect.bottom) - canvasRect.top;
+        const top = Math.max(0, elemRect.top - canvasRect.top);
+
+        const width = Math.min(canvasRect.width, right - left);
+        const height = Math.min(canvasRect.height, bottom - top);
+
+        //设置剪函数以渲染一部分场景
+        const positiveYUpBottom=canvasRect.height-bottom
+        renderer.setScissor(left,positiveYUpBottom,width,height)
+        renderer.setViewport(left,positiveYUpBottom,width,height)
+
+        //返回aspect
+        return width/height
+        
+      }
+      
+      function resizeRendererToDisplaySize(renderer){
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        const needResize = canvas.width !== width || canvas.height !== height;
+        if (needResize) {
+          renderer.setSize(width, height, false);
+        }
+        return needResize;
+      }
+
+      function render(){
+        // time *= 0.001;
+
+        // if (resizeRendererToDisplaySize(renderer)) {
+        //   const canvas = renderer.domElement;
+        //   camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        //   camera.updateProjectionMatrix();
+        // }
+
+        resizeRendererToDisplaySize(renderer)
+        //启用剪刀函数
+        renderer.setScissorTest(true)
+        
+        //渲染主视野
+        {
+          const aspect=setScissorForElement(view1Elem)
+          //透视摄影机
+          // camera.aspect=aspect
+          //正交摄影机
+          camera.left=-aspect
+          camera.right=aspect
+
+          camera.updateProjectionMatrix()
+          cameraHelper.update()
+          cameraHelper.visible=false
+          scene.background.set(0x000000)
+          renderer.render(scene,camera)
+        }
+        //渲染第二台摄像机
+        {
+          const aspect=setScissorForElement(view2Elem)
+          camera2.aspect=aspect
+          camera2.updateProjectionMatrix()
+          cameraHelper.visible=true
+          scene.background.set(0x000040)
+          renderer.render(scene,camera2)
+        }
+
+        // renderer.render(scene,camera)
+        requestAnimationFrame(render)
+      }
+      requestAnimationFrame(render)
+    }
+    main();
+  </script>
+</body>
+</html>

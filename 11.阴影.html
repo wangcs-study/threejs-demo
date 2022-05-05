@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阴影</title>
+</head>
+<body>
+  <!-- 
+    Three.js默认使用shadow maps(阴影贴图)。
+    阴影贴图的工作方式就是具有投射阴影的光能对所有能被投射阴影的物体从光源渲染阴影
+   -->
+   <canvas id="c"></canvas>
+   <script type="importmap">
+     {
+       imports:{
+         "three":"./node_modules/three/build/three.module.js"
+       }
+     }
+   </script>
+   <script type="module">
+     import * as THREE from 'three'
+     function main(){
+       const canvas=document.querySelector('#c');
+       const renderer=new THREE.WebGLRenderer(canvas)
+
+       const fov=45;
+       const aspect=2;
+       const near=0.1;
+       const far=100;
+       const camera=new THREE.PerspectiveCamera(fov,aspect,near,far);
+       camera.position.set(0,10,20);
+       camera.lookAt(0,0,0);
+
+       const scene=new THREE.Scene();
+       scene.background=new THREE.Color('white')
+
+       const loader=new THREE.TextureLoader()
+
+       {
+         const planeSize=40;
+         const texture=loader.load('https://threejs.org/manual/examples/resources/images/checker.png')
+         texture.wrapS=THREE.RepeatWrapping;
+         texture.wrapT=THREE.RepeatWrapping;
+         texture.magFilter=THREE.NearestFilter;
+         const repeats=planeSize/2;
+         texture.repeat.set(repeats,repeats);
+
+         const planeGeo=new THREE.PlaneGeometry(planeSize,planeSize)
+         const planeMat=new THREE.MeshBasicMaterial({
+           map:texture,
+           side:THREE.DoubleSide
+         })
+         planeMat.color.setRGB(1.5,1.5,1.5);
+         const mesh=new THREE.Mesh(planeGeo,planeMat);
+         mesh.position.x=Math.PI * -.5;
+         scene.add(mesh)
+       }
+
+       const shadowTexture=loader.load('https://threejs.org/manual/examples/resources/images/roundshadow.png');
+       const sphereShadowBases=[];
+       {
+         const sphereRadius=1;
+         const sphereWidthDivisions=32;
+         const sphereHeightDivisions=16;
+         const sphereGeo=new THREE.SphereGeometry(sphereRadius,sphereWidthDivisions,sphereHeightDivisions)
+
+         const planeSize=1;
+         const shadowGeo=new THREE.PlaneGeometry(planeSize,planeSize)
+         
+         const numSpheres=15;
+         for(let i=0;i<numSpheres;i++){
+           const base=new THREE.Object3D();
+           scene.add(base)
+
+           const shadowMat=new THREE.MeshBasicMaterial({
+             map:shadowTexture,
+             transparent:true,
+             depthWrite:false,
+           })
+           const shadowMesh=new THREE.Mesh(shadowGeo,shadowMat);
+           shadowMesh.position.y=0.001;
+           shadowMesh.position.x=Math.PI * -.5;
+           const shadowSize=sphereRadius*5;
+           shadowMesh.scale.set(shadowSize,shadowSize,shadowSize);
+           base.add(shadowMesh)
+           
+
+         }
+       }
+
+       function resizeRendererToDisplaySize(renderer){
+         const canvas=renderer.domElement;
+         const width=canvas.clientWidth;
+         const height=canvas.clientHeight;
+         const needSize=canvas.width !== width || canvas.height!==height;
+         if(needSize){
+           renderer.setSize(width,height,false)
+         }
+         return needSize
+       }
+
+       function render(time){
+         time*=0.001;
+         if(resizeRendererToDisplaySize(renderer)){
+            const canvas=renderer.domElement;
+            camera.aspect=canvas.clientWidth/canvas.clientHeight;
+            camera.updateProjectionMatrix();
+         }
+         renderer.render(scene,camera)
+         requestAnimationFrame(render)
+       }
+       requestAnimationFrame(render)
+     }
+     main();
+   </script>
+</body>
+</html>
